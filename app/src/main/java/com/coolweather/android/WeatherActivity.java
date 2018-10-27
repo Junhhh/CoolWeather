@@ -1,5 +1,6 @@
 package com.coolweather.android;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
@@ -21,6 +22,7 @@ import android.widget.Toast;
 import com.bumptech.glide.Glide;
 import com.coolweather.android.gson.Forecast;
 import com.coolweather.android.gson.Weather;
+import com.coolweather.android.service.AutoUpdateService;
 import com.coolweather.android.util.HttpUtil;
 import com.coolweather.android.util.Utility;
 
@@ -94,7 +96,7 @@ public class WeatherActivity extends AppCompatActivity {
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         String weatherString = prefs.getString("weather",null);
-        final String weatherId;
+        final String weatherId;//下面说的就是不能直接调用这个
         if(weatherString != null){
             //有缓存时直接解析天气数据
             Weather weather = Utility.handleWeatherResponse(weatherString);
@@ -110,6 +112,12 @@ public class WeatherActivity extends AppCompatActivity {
         swipeRefresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
+                //这里要重新在SharedPreferences文件中读取weatherId，不能直接调用上面的weatherId，
+                //因为从侧栏点进来的直接调用的话会刷新成上一个weatherId的（因为调用上面的weatherId要改成final，final意思就是不能改动）
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(WeatherActivity.this);
+                String weatherString = prefs.getString("weather",null);
+                Weather weather = Utility.handleWeatherResponse(weatherString);
+                String weatherId = weather.basic.weatherId;
                 requestWeather(weatherId);
             }
         });
@@ -220,7 +228,8 @@ public class WeatherActivity extends AppCompatActivity {
         carWashText.setText(carWash);
         sportText.setText(sport);
         weatherLayout.setVisibility(View.VISIBLE);
-
+        Intent intent = new Intent(this,AutoUpdateService.class);
+        startService(intent);
     }
 
     /**
